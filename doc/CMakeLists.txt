@@ -62,7 +62,9 @@ set(MAN3_SRCS
     modbus_get_float_abcd.txt
     modbus_set_float.txt
     modbus_rtu_set_serial_mode.txt
-    modbus_get_response_timeout.txt)
+    modbus_get_response_timeout.txt
+    modbus_read_file_record.txt
+    modbus_write_file_record.txt)
 
 #### Build Configuration ####
 option(BUILD_DOCS_HTML "Build HTML documentation" ON)

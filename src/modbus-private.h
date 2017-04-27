@@ -114,6 +114,7 @@ void _error_print(modbus_t *ctx, const char *context);
 int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type);
 void _sleep_response_timeout(modbus_t *ctx);
 int _modbus_send_msg(modbus_t *ctx, uint8_t *msg, int msg_length);
+void _modbus_free_files(modbus_file_t *files, int nb_files);
 
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *dest, const char *src, size_t dest_size);
