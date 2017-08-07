@@ -71,7 +71,9 @@ MODBUS_BEGIN_DECLS
 #define MODBUS_FC_MASK_WRITE_REGISTER       0x16
 #define MODBUS_FC_WRITE_AND_READ_REGISTERS  0x17
 
-#define MODBUS_BROADCAST_ADDRESS    0
+#define MODBUS_SLAVE_ACCEPT_ALL  -2
+#define MODBUS_SLAVE_INIT        -1
+#define MODBUS_BROADCAST_ADDRESS  0
 
 /* Modbus_Application_Protocol_V1_1b.pdf (chapter 6 section 1 page 12)
  * Quantity of Coils to read (2 bytes): 1 to 2000 (0x7D0)
@@ -243,6 +245,11 @@ MODBUS_API int modbus_reply(modbus_t *ctx, const uint8_t *req,
                             int req_length, modbus_mapping_t *mb_mapping);
 MODBUS_API int modbus_reply_exception(modbus_t *ctx, const uint8_t *req,
                                       unsigned int exception_code);
+MODBUS_API int modbus_set_reply_callbacks(modbus_t *ctx,
+                                          const modbus_reply_callbacks_t *cb,
+                                          void *user_ctx);
+MODBUS_API int modbus_reply_callback(modbus_t *ctx, const uint8_t *req,
+                                     int req_length);
 
 /**
  * UTILS FUNCTIONS
