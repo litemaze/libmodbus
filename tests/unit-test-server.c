@@ -39,8 +39,10 @@ int main(int argc, char*argv[])
     int use_backend;
     uint8_t *query;
     int header_length;
-    char devicename[MAX_DEVICENAME_LENGHT]={0,};
-    int baudrate=115200;
+    char devicename[MAX_DEVICENAME_LENGHT] = {
+        0,
+    };
+    int baudrate = 115200;
 
     if (argc > 1) {
         if (strcmp(argv[1], "tcp") == 0) {
@@ -58,15 +60,13 @@ int main(int argc, char*argv[])
         use_backend = TCP;
     }
 
-    if (argc>2)
-    {
-        strncpy(devicename,argv[2],MAX_DEVICENAME_LENGHT);
-    }else{
-        strncpy(devicename,"/dev/ttyUSB0",MAX_DEVICENAME_LENGHT);
+    if (argc > 2) {
+        strncpy(devicename, argv[2], MAX_DEVICENAME_LENGHT);
+    } else {
+        strncpy(devicename, "/dev/ttyUSB0", MAX_DEVICENAME_LENGHT);
     }
-    if (argc>3)
-    {
-        baudrate=atoi(argv[3]);
+    if (argc > 3) {
+        baudrate = atoi(argv[3]);
     }
 
     if (use_backend == TCP) {
@@ -84,13 +84,11 @@ int main(int argc, char*argv[])
 
     modbus_set_debug(ctx, TRUE);
 
-
-
-    mb_mapping = modbus_mapping_new_start_address_extend (
+    mb_mapping = modbus_mapping_new_start_address_extend(
         UT_BITS_ADDRESS, UT_BITS_NB,
         UT_INPUT_BITS_ADDRESS, UT_INPUT_BITS_NB,
         UT_REGISTERS_ADDRESS, UT_REGISTERS_NB_MAX,
-        UT_INPUT_REGISTERS_ADDRESS, UT_INPUT_REGISTERS_NB, 
+        UT_INPUT_REGISTERS_ADDRESS, UT_INPUT_REGISTERS_NB,
         UT_FILE_REGISTERS_NB);
 
     if (mb_mapping == NULL) {
