@@ -14,15 +14,15 @@
 #include <modbus.h>
 
 #if defined(_WIN32)
-#include <ws2tcpip.h>
+#    include <ws2tcpip.h>
 #else
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#    include <sys/select.h>
+#    include <sys/socket.h>
+#    include <netinet/in.h>
+#    include <arpa/inet.h>
 #endif
 
-#define NB_CONNECTION    5
+#define NB_CONNECTION 5
 
 static modbus_t *ctx = NULL;
 static modbus_mapping_t *mb_mapping;
@@ -80,7 +80,7 @@ int main(void)
 
     for (;;) {
         rdset = refset;
-        if (select(fdmax+1, &rdset, NULL, NULL, NULL) == -1) {
+        if (select(fdmax + 1, &rdset, NULL, NULL, NULL) == -1) {
             perror("Server select() failure.");
             close_sigint(1);
         }

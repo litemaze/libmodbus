@@ -8,15 +8,15 @@
 #define MODBUS_RTU_PRIVATE_H
 
 #ifndef _MSC_VER
-#include <stdint.h>
+#    include <stdint.h>
 #else
-#include "stdint.h"
+#    include "stdint.h"
 #endif
 
 #if defined(_WIN32)
-#include <windows.h>
+#    include <windows.h>
 #else
-#include <termios.h>
+#    include <termios.h>
 #endif
 
 #define _MODBUS_RTU_HEADER_LENGTH      1
@@ -26,12 +26,12 @@
 #define _MODBUS_RTU_CHECKSUM_LENGTH    2
 
 #if defined(_WIN32)
-#if !defined(ENOTSUP)
-#define ENOTSUP WSAEOPNOTSUPP
-#endif
+#    if !defined(ENOTSUP)
+#        define ENOTSUP WSAEOPNOTSUPP
+#    endif
 
 /* WIN32: struct containing serial handle and a receive buffer */
-#define PY_BUF_SIZE 512
+#    define PY_BUF_SIZE 512
 struct win32_ser {
     /* File handle */
     HANDLE fd;
@@ -67,7 +67,7 @@ typedef struct _modbus_rtu {
     int rts;
     int rts_delay;
     int onebyte_time;
-    void (*set_rts) (modbus_t *ctx, int on);
+    void (*set_rts)(modbus_t *ctx, int on);
 #endif
     /* To handle many slaves on the same link */
     int confirmation_to_ignore;

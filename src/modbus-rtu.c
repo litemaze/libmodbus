@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <string.h>
 #ifndef _MSC_VER
-#include <unistd.h>
+#    include <unistd.h>
 #endif
 #include <assert.h>
 
@@ -20,11 +20,11 @@
 #include "modbus-rtu-private.h"
 
 #if HAVE_DECL_TIOCSRS485 || HAVE_DECL_TIOCM_RTS
-#include <sys/ioctl.h>
+#    include <sys/ioctl.h>
 #endif
 
 #if HAVE_DECL_TIOCSRS485
-#include <linux/serial.h>
+#    include <linux/serial.h>
 #endif
 
 /* Table of CRC values for high-order byte */
@@ -133,7 +133,7 @@ static uint16_t crc16(uint8_t *buffer, uint16_t buffer_length)
 {
     uint8_t crc_hi = 0xFF; /* high CRC byte initialized */
     uint8_t crc_lo = 0xFF; /* low CRC byte initialized */
-    unsigned int i; /* will index into CRC lookup */
+    unsigned int i;        /* will index into CRC lookup */
 
     /* pass through message buffer */
     while (buffer_length--) {
@@ -274,7 +274,7 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
     DWORD n_bytes = 0;
     return (WriteFile(ctx_rtu->w_ser.fd, req, req_length, &n_bytes, NULL)) ? (ssize_t)n_bytes : -1;
 #else
-#if HAVE_DECL_TIOCM_RTS
+#    if HAVE_DECL_TIOCM_RTS
     modbus_rtu_t *ctx_rtu = ctx->backend_data;
     if (ctx_rtu->rts != MODBUS_RTU_RTS_NONE) {
         ssize_t size;
@@ -293,11 +293,11 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
 
         return size;
     } else {
-#endif
+#    endif
         return write(ctx->s, req, req_length);
-#if HAVE_DECL_TIOCM_RTS
+#    if HAVE_DECL_TIOCM_RTS
     }
-#endif
+#    endif
 #endif
 }
 
@@ -584,9 +584,9 @@ static int _modbus_rtu_connect(modbus_t *ctx)
        Timeouts are ignored in canonical input mode or when the
        NDELAY option is set on the file via open or fcntl */
     flags = O_RDWR | O_NOCTTY | O_NDELAY | O_EXCL;
-#ifdef O_CLOEXEC
+#    ifdef O_CLOEXEC
     flags |= O_CLOEXEC;
-#endif
+#    endif
 
     ctx->s = open(ctx_rtu->device, flags);
     if (ctx->s == -1) {
@@ -633,76 +633,76 @@ static int _modbus_rtu_connect(modbus_t *ctx)
     case 38400:
         speed = B38400;
         break;
-#ifdef B57600
+#    ifdef B57600
     case 57600:
         speed = B57600;
         break;
-#endif
-#ifdef B115200
+#    endif
+#    ifdef B115200
     case 115200:
         speed = B115200;
         break;
-#endif
-#ifdef B230400
+#    endif
+#    ifdef B230400
     case 230400:
         speed = B230400;
         break;
-#endif
-#ifdef B460800
+#    endif
+#    ifdef B460800
     case 460800:
         speed = B460800;
         break;
-#endif
-#ifdef B500000
+#    endif
+#    ifdef B500000
     case 500000:
         speed = B500000;
         break;
-#endif
-#ifdef B576000
+#    endif
+#    ifdef B576000
     case 576000:
         speed = B576000;
         break;
-#endif
-#ifdef B921600
+#    endif
+#    ifdef B921600
     case 921600:
         speed = B921600;
         break;
-#endif
-#ifdef B1000000
+#    endif
+#    ifdef B1000000
     case 1000000:
         speed = B1000000;
         break;
-#endif
-#ifdef B1152000
-   case 1152000:
+#    endif
+#    ifdef B1152000
+    case 1152000:
         speed = B1152000;
         break;
-#endif
-#ifdef B1500000
+#    endif
+#    ifdef B1500000
     case 1500000:
         speed = B1500000;
         break;
-#endif
-#ifdef B2500000
+#    endif
+#    ifdef B2500000
     case 2500000:
         speed = B2500000;
         break;
-#endif
-#ifdef B3000000
+#    endif
+#    ifdef B3000000
     case 3000000:
         speed = B3000000;
         break;
-#endif
-#ifdef B3500000
+#    endif
+#    ifdef B3500000
     case 3500000:
         speed = B3500000;
         break;
-#endif
-#ifdef B4000000
+#    endif
+#    ifdef B4000000
     case 4000000:
         speed = B4000000;
         break;
-#endif
+#    endif
     default:
         speed = B9600;
         if (ctx->debug) {
@@ -749,7 +749,7 @@ static int _modbus_rtu_connect(modbus_t *ctx)
 
     /* Stop bit (1 or 2) */
     if (ctx_rtu->stop_bit == 1)
-        tios.c_cflag &=~ CSTOPB;
+        tios.c_cflag &= ~CSTOPB;
     else /* 2 */
         tios.c_cflag |= CSTOPB;
 
@@ -757,11 +757,11 @@ static int _modbus_rtu_connect(modbus_t *ctx)
        PARODD       Use odd parity instead of even */
     if (ctx_rtu->parity == 'N') {
         /* None */
-        tios.c_cflag &=~ PARENB;
+        tios.c_cflag &= ~PARENB;
     } else if (ctx_rtu->parity == 'E') {
         /* Even */
         tios.c_cflag |= PARENB;
-        tios.c_cflag &=~ PARODD;
+        tios.c_cflag &= ~PARODD;
     } else {
         /* Odd */
         tios.c_cflag |= PARENB;
@@ -843,7 +843,7 @@ static int _modbus_rtu_connect(modbus_t *ctx)
     */
 
     /* Raw ouput */
-    tios.c_oflag &=~ OPOST;
+    tios.c_oflag &= ~OPOST;
 
     /* C_CC         Control characters
        VMIN         Minimum number of characters to read
@@ -1036,7 +1036,7 @@ int modbus_rtu_set_rts(modbus_t *ctx, int mode)
     return -1;
 }
 
-int modbus_rtu_set_custom_rts(modbus_t *ctx, void (*set_rts) (modbus_t *ctx, int on))
+int modbus_rtu_set_custom_rts(modbus_t *ctx, void (*set_rts)(modbus_t *ctx, int on))
 {
     if (ctx == NULL) {
         errno = EINVAL;
@@ -1164,7 +1164,7 @@ static int _modbus_rtu_select(modbus_t *ctx, fd_set *rset,
         return -1;
     }
 #else
-    while ((s_rc = select(ctx->s+1, rset, NULL, NULL, tv)) == -1) {
+    while ((s_rc = select(ctx->s + 1, rset, NULL, NULL, tv)) == -1) {
         if (errno == EINTR) {
             if (ctx->debug) {
                 fprintf(stderr, "A non blocked signal was caught\n");
@@ -1187,7 +1187,8 @@ static int _modbus_rtu_select(modbus_t *ctx, fd_set *rset,
     return s_rc;
 }
 
-static void _modbus_rtu_free(modbus_t *ctx) {
+static void _modbus_rtu_free(modbus_t *ctx)
+{
     if (ctx->backend_data) {
         free(((modbus_rtu_t *)ctx->backend_data)->device);
         free(ctx->backend_data);
@@ -1215,10 +1216,9 @@ const modbus_backend_t _modbus_rtu_backend = {
     _modbus_rtu_close,
     _modbus_rtu_flush,
     _modbus_rtu_select,
-    _modbus_rtu_free
-};
+    _modbus_rtu_free};
 
-modbus_t* modbus_new_rtu(const char *device,
+modbus_t *modbus_new_rtu(const char *device,
                          int baud, char parity, int data_bit,
                          int stop_bit)
 {

@@ -5,12 +5,12 @@
  */
 
 #if defined(_WIN32)
-# define OS_WIN32
+#    define OS_WIN32
 /* ws2_32.dll has getaddrinfo and freeaddrinfo on Windows XP and later.
  * minwg32 headers check WINVER before allowing the use of these */
-# ifndef WINVER
-#   define WINVER 0x0501
-# endif
+#    ifndef WINVER
+#        define WINVER 0x0501
+#    endif
 #endif
 
 #include <stdio.h>
@@ -18,39 +18,39 @@
 #include <string.h>
 #include <errno.h>
 #ifndef _MSC_VER
-#include <unistd.h>
+#    include <unistd.h>
 #endif
 #include <signal.h>
 #include <sys/types.h>
 
 #if defined(_WIN32)
 /* Already set in modbus-tcp.h but it seems order matters in VS2005 */
-# include <winsock2.h>
-# include <ws2tcpip.h>
-# define SHUT_RDWR 2
-# define close closesocket
+#    include <winsock2.h>
+#    include <ws2tcpip.h>
+#    define SHUT_RDWR 2
+#    define close closesocket
 #else
-# include <sys/socket.h>
-# include <sys/ioctl.h>
+#    include <sys/socket.h>
+#    include <sys/ioctl.h>
 
-#if defined(__OpenBSD__) || (defined(__FreeBSD__) && __FreeBSD__ < 5)
-# define OS_BSD
-# include <netinet/in_systm.h>
-#endif
+#    if defined(__OpenBSD__) || (defined(__FreeBSD__) && __FreeBSD__ < 5)
+#        define OS_BSD
+#        include <netinet/in_systm.h>
+#    endif
 
-# include <netinet/in.h>
-# include <netinet/ip.h>
-# include <netinet/tcp.h>
-# include <arpa/inet.h>
-# include <netdb.h>
+#    include <netinet/in.h>
+#    include <netinet/ip.h>
+#    include <netinet/tcp.h>
+#    include <arpa/inet.h>
+#    include <netdb.h>
 #endif
 
 #if !defined(MSG_NOSIGNAL)
-#define MSG_NOSIGNAL 0
+#    define MSG_NOSIGNAL 0
 #endif
 
 #if defined(_AIX) && !defined(MSG_DONTWAIT)
-#define MSG_DONTWAIT MSG_NONBLOCK
+#    define MSG_DONTWAIT MSG_NONBLOCK
 #endif
 
 #include "modbus-private.h"
@@ -146,7 +146,6 @@ static int _modbus_tcp_build_response_basis(sft_t *sft, uint8_t *rsp)
     return _MODBUS_TCP_PRESET_RSP_LENGTH;
 }
 
-
 static int _modbus_tcp_prepare_response_tid(const uint8_t *req, int *req_length)
 {
     return (req[0] << 8) + req[1];
@@ -172,11 +171,13 @@ static ssize_t _modbus_tcp_send(modbus_t *ctx, const uint8_t *req, int req_lengt
     return send(ctx->s, (const char *)req, req_length, MSG_NOSIGNAL);
 }
 
-static int _modbus_tcp_receive(modbus_t *ctx, uint8_t *req) {
+static int _modbus_tcp_receive(modbus_t *ctx, uint8_t *req)
+{
     return _modbus_receive_msg(ctx, req, MSG_INDICATION);
 }
 
-static ssize_t _modbus_tcp_recv(modbus_t *ctx, uint8_t *rsp, int rsp_length) {
+static ssize_t _modbus_tcp_recv(modbus_t *ctx, uint8_t *rsp, int rsp_length)
+{
     return recv(ctx->s, (char *)rsp, rsp_length, 0);
 }
 
@@ -229,16 +230,16 @@ static int _modbus_tcp_set_ipv4_options(int s)
      * make sockets non-blocking */
     /* Do not care about the return value, this is optional */
 #if !defined(SOCK_NONBLOCK) && defined(FIONBIO)
-#ifdef OS_WIN32
+#    ifdef OS_WIN32
     {
         /* Setting FIONBIO expects an unsigned long according to MSDN */
         u_long loption = 1;
         ioctlsocket(s, FIONBIO, &loption);
     }
-#else
+#    else
     option = 1;
     ioctl(s, FIONBIO, &option);
-#endif
+#    endif
 #endif
 
 #ifndef OS_WIN32
@@ -458,7 +459,7 @@ static int _modbus_tcp_flush(modbus_t *ctx)
         tv.tv_usec = 0;
         FD_ZERO(&rset);
         FD_SET(ctx->s, &rset);
-        rc = select(ctx->s+1, &rset, NULL, NULL, &tv);
+        rc = select(ctx->s + 1, &rset, NULL, NULL, &tv);
         if (rc == -1) {
             return -1;
         }
@@ -576,7 +577,7 @@ int modbus_tcp_pi_listen(modbus_t *ctx, int nb_connection)
         service = ctx_tcp_pi->service;
     }
 
-    memset(&ai_hints, 0, sizeof (ai_hints));
+    memset(&ai_hints, 0, sizeof(ai_hints));
     /* If node is not NULL, than the AI_PASSIVE flag is ignored. */
     ai_hints.ai_flags |= AI_PASSIVE;
 #ifdef AI_ADDRCONFIG
@@ -616,7 +617,7 @@ int modbus_tcp_pi_listen(modbus_t *ctx, int nb_connection)
         } else {
             int enable = 1;
             rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
-                            (void *)&enable, sizeof (enable));
+                            (void *)&enable, sizeof(enable));
             if (rc != 0) {
                 close(s);
                 if (ctx->debug) {
@@ -718,7 +719,7 @@ int modbus_tcp_pi_accept(modbus_t *ctx, int *s)
 static int _modbus_tcp_select(modbus_t *ctx, fd_set *rset, struct timeval *tv, int length_to_read)
 {
     int s_rc;
-    while ((s_rc = select(ctx->s+1, rset, NULL, NULL, tv)) == -1) {
+    while ((s_rc = select(ctx->s + 1, rset, NULL, NULL, tv)) == -1) {
         if (errno == EINTR) {
             if (ctx->debug) {
                 fprintf(stderr, "A non blocked signal was caught\n");
@@ -739,7 +740,8 @@ static int _modbus_tcp_select(modbus_t *ctx, fd_set *rset, struct timeval *tv, i
     return s_rc;
 }
 
-static void _modbus_tcp_free(modbus_t *ctx) {
+static void _modbus_tcp_free(modbus_t *ctx)
+{
     free(ctx->backend_data);
     free(ctx);
 }
@@ -766,7 +768,6 @@ const modbus_backend_t _modbus_tcp_backend = {
     _modbus_tcp_free
 };
 
-
 const modbus_backend_t _modbus_tcp_pi_backend = {
     _MODBUS_BACKEND_TYPE_TCP,
     _MODBUS_TCP_HEADER_LENGTH,
@@ -789,7 +790,7 @@ const modbus_backend_t _modbus_tcp_pi_backend = {
     _modbus_tcp_free
 };
 
-modbus_t* modbus_new_tcp(const char *ip, int port)
+modbus_t *modbus_new_tcp(const char *ip, int port)
 {
     modbus_t *ctx;
     modbus_tcp_t *ctx_tcp;
@@ -853,8 +854,7 @@ modbus_t* modbus_new_tcp(const char *ip, int port)
     return ctx;
 }
 
-
-modbus_t* modbus_new_tcp_pi(const char *node, const char *service)
+modbus_t *modbus_new_tcp_pi(const char *node, const char *service)
 {
     modbus_t *ctx;
     modbus_tcp_pi_t *ctx_tcp_pi;
