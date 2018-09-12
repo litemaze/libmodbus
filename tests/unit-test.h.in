@@ -7,7 +7,7 @@
 #ifndef _UNIT_TEST_H_
 #define _UNIT_TEST_H_
 
-/* Constants defined by configure.ac */
+/* Constants defined by CMake */
 #define HAVE_INTTYPES_H @HAVE_INTTYPES_H@
 #define HAVE_STDINT_H @HAVE_STDINT_H@
 

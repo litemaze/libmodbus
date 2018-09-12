@@ -49,6 +49,7 @@ set(MAN3_SRCS
     modbus_get_byte_timeout.txt
     modbus_get_header_length.txt
     modbus_reply.txt
+    modbus_reply_callback.txt
     modbus_get_socket.txt
     modbus_connect.txt
     modbus_tcp_listen.txt

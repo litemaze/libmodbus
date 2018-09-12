@@ -62,7 +62,9 @@ add_library(modbus
     src/modbus-data.c
     src/modbus-rtu.c
     src/modbus-tcp.c
-    src/modbus.c)
+    src/modbus.c
+    src/modbus-reply.c
+    src/modbus-reply-mapping.c)
 
 target_include_directories(modbus PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(modbus INTERFACE
