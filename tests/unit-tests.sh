@@ -15,5 +15,5 @@ echo "Starting client"
 rc=$?
 
 killall unit-test-server
-exit $rc
 
+exit $rc
