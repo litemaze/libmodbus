@@ -30,31 +30,46 @@ QNX and Windows.
 Installation
 ------------
 
-You will only need to install automake, autoconf, libtool and a C compiler (gcc
-or clang) to compile the library and asciidoc and xmlto to generate the
-documentation (optional).
+You will only need to install CMake (3.0 or higher) and a C compiler to compile
+the library and asciidoc and xmlto to generate the documentation (optional).
 
-To install, just run the usual dance, `./configure && make install`. Run
-`./autogen.sh` first to generate the `configure` script if required.
+To install, the recommended way is to create a out-of-tree build-dir somewhere
+out of the source tree and run `cmake path/to/libmodbus/ && make`. Or with ninja
+`cmake path/to/libmodbus -GNinja && make`.
 
-You can change installation directory with prefix option, eg. `./configure
---prefix=/usr/local/`. You have to check that the installation library path is
-properly set up on your system (*/etc/ld.so.conf.d*) and library cache is up to
-date (run `ldconfig` as root if required).
+You can change installation directory by setting the `CMAKE_INSTALL_PREFIX`-
+variable at CMake-configure time (inside the build-dir):
+
+    cmake -DCMAKE_INSTALL_PREFIX=/usr -GNinja path/to/libmodbus
+	ninja install
+
+By default a shared-library is build, this can be toggled with the
+`BUILD_SHARED_LIBS`-variable
+
+    cmake -DBUILD_SHARED_LIBS=OFF <...>
+
+Building in with compiler-debug-options or release-options can be done by
+specifying `CMAKE_BUILD_TYPE`:
+
+    cmake -DCMAKE_BUILD_TYPE=Release|Debug
+
+You have to check that the installation library path is properly set up on your
+system (*/etc/ld.so.conf.d*) and library cache is up to date
+(run `ldconfig` as root if required).
 
 The library provides a *libmodbus.pc* file to use with `pkg-config` to ease your
 program compilation and linking.
 
-If you want to compile with Microsoft Visual Studio, you need to install
+The library also provides a `cmake/libmodbusConfig.cmake` which, after
+installation should allow you to include the libmodbus-library
+(including its include-paths) in your CMake-based project.
+
+If you want to compile with Microsoft Visual Studio, use cmake for Windows.
+It will generate a VCProject-file or NMake-files. You may need to install
 <https://github.com/chemeris/msinttypes> to fill the absence of stdint.h.
 
-To compile under Windows, install [MinGW](http://www.mingw.org/) and MSYS then
-select the common packages (gcc, automake, libtool, etc). The directory
-*./src/win32/* contains a Visual C project.
-
-To compile under OS X with [homebrew](http://mxcl.github.com/homebrew/), you
-will need to install the following dependencies first: `brew install autoconf
-automake libtool`.
+To compile under OS X with [homebrew](http://mxcl.github.com/homebrew/) should
+work seemlessly as homebrew supports CMake.
 
 Documentation
 -------------
@@ -63,9 +78,18 @@ The documentation is available [online](http://libmodbus.org/documentation) or
 as manual pages after installation.
 
 The documentation is based on
-[AsciiDoc](http://www.methods.co.nz/asciidoc/).  Only man pages are built
-by default with `make` command, you can run `make htmldoc` in *doc* directory
-to generate HTML files.
+[AsciiDoc](http://www.methods.co.nz/asciidoc/).
+
+To build the man-pages and/or the html-documentation you need to enable the CMake option
+`BUILD_DOCS` and `BUILD_DOCS_HTML`, `BUILD_DOCS_MAN` respectively. If enabled the generated
+man-pages will be installed.
+
+If the necessary tools to build the documentation are not detected by cmake, these variables
+are forced to off.
+
+    cmake -DCMAKE_INSTALL_PREFIX=/usr -GNinja path/to/libmodbus -DBUILD_DOCS=ON
+	ninja doc
+	ninja install
 
 Testing
 -------
@@ -75,14 +99,21 @@ code to fit your needs (it's Free Software :).
 
 See *tests/README* for a description of each program.
 
-For a quick test of libmodbus, you can run the following programs in two shells:
+Tests are built by default, but this can be disable by setting the variable
+`BUILD_TESTING` to OFF.
+
+For a quick manual test of libmodbus, you can run the following programs in two shells:
 
 1. ./unit-test-server
 2. ./unit-test-client
 
 By default, all TCP unit tests will be executed (see --help for options).
 
-It's also possible to run the unit tests with `make check`.
+It's also possible to run the unit tests with ctest:
+
+    cmake -GNinja path/to/libmodbus
+	ninja
+    ctest
 
 To report a bug or to contribute
 --------------------------------
