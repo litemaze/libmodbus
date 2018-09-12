@@ -66,13 +66,13 @@ add_library(modbus
 
 target_include_directories(modbus PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(modbus INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/modbus>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/modbus>
 )
 set_target_properties(modbus PROPERTIES PUBLIC_HEADER "${MODBUS_PUBLIC_HEADERS}")
 
 if(CMAKE_COMPILER_IS_GNUCC)
-target_compile_options(modbus PRIVATE -D_GNU_SOURCE)
+    target_compile_options(modbus PRIVATE -D_GNU_SOURCE)
 endif()
 
 set(LIBMODBUS_SOVERSION_VERSION 5.1.0)
@@ -85,7 +85,7 @@ set_target_properties(modbus PROPERTIES
 option(BUILD_DOCS "Build libmodbus docs" OFF)
 if(BUILD_DOCS)
     add_subdirectory(doc)
-endif(BUILD_DOCS)
+endif()
 #### INSTALL ####
 
 install(TARGETS modbus EXPORT libmodbusConfig
