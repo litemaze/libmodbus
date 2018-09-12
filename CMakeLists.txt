@@ -104,3 +104,9 @@ set(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libmodbus.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libmodbus.pc @ONLY)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libmodbus.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+option(BUILD_TESTING "Build the testing tree and enable the usage of ctest" ON)
+if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
