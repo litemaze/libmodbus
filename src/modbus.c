@@ -899,61 +899,146 @@ int modbus_read_input_registers(modbus_t *ctx, int addr, int nb,
     return status;
 }
 
-int modbus_read_file_record(modbus_t *ctx, int addr, int sub_addr, int nb, uint16_t *dest)
+static int modbus_file_record_request(modbus_t *ctx,
+                                      const modbus_file_record_request_t requests[],
+                                      size_t request_count,
+                                      uint8_t func,
+                                      uint8_t *req,
+                                      uint8_t *rsp)
 {
-    int rc;
+    size_t i;
+    int byte_count = request_count * 7; // 7 is the size of one sub-request without the data
     int req_length;
-    uint8_t req[_MIN_REQ_LENGTH + 4];
-    uint8_t rsp[MAX_MESSAGE_LENGTH];
+    int rc;
 
     if (ctx == NULL) {
         errno = EINVAL;
         return -1;
     }
 
-    if (sub_addr > MODBUS_MAX_FILE_RECORD_NUMBER) {
+    for (i = 0; i < request_count; i++) {
+        byte_count += requests[i].record_length * 2;
+
+        if (requests[i].file_number == 0) {
+            if (ctx->debug) {
+                fprintf(stderr,
+                        "ERROR File number must be between 0x1 and 0xFFFF - is %d (for request: %zd)\n",
+                        requests[i].file_number, i);
+            }
+            errno = EMBMDATA;
+            return -1;
+        }
+
+        if (requests[i].record_number > MODBUS_MAX_FILE_RECORD_NUMBER) {
+            if (ctx->debug) {
+                fprintf(stderr,
+                        "ERROR Too big file record number (%d > %d)\n",
+                        requests[i].record_number, MODBUS_MAX_FILE_RECORD_NUMBER);
+            }
+            errno = EMBMDATA;
+            return -1;
+        }
+    }
+
+    if (byte_count > 0xF5) {
         if (ctx->debug) {
             fprintf(stderr,
-                    "ERROR Too big file record number (%d > %d)\n",
-                    sub_addr, MODBUS_MAX_FILE_RECORD_NUMBER);
+                    "ERROR The total number of sub-requests exceed maximum allowed message-length: %d vs %d\n",
+                    byte_count, 0xF5);
         }
         errno = EMBMDATA;
         return -1;
     }
 
     req_length = ctx->backend->build_request_basis(ctx,
-                                                   MODBUS_FC_READ_FILE_RECORD,
-                                                   0, 0, req);
+                                                   func,
+                                                   byte_count, 0, req); // using address-field for byte_count
+    req_length -= 2;                                                    // rewind for byte-count-field
 
-    req_length -= 4;
-    req[req_length++] = 7;  // one request, so 7 bytes
-    req[req_length++] = 6;
-    req[req_length++] = addr >> 8;
-    req[req_length++] = addr & 0x00ff;
-    req[req_length++] = sub_addr >> 8;
-    req[req_length++] = sub_addr & 0x00ff;
-    req[req_length++] = nb >> 8;
-    req[req_length++] = nb & 0x00ff;
+    for (i = 0; i < request_count; i++) {
+        size_t j;
+
+        req[req_length++] = 6;
+        req[req_length++] = requests[i].file_number >> 8;
+        req[req_length++] = requests[i].file_number & 0xff;
+        req[req_length++] = requests[i].record_number >> 8;
+        req[req_length++] = requests[i].record_number & 0xff;
+        req[req_length++] = requests[i].record_length >> 8;
+        req[req_length++] = requests[i].record_length & 0xff;
+
+        if (func == MODBUS_FC_WRITE_FILE_RECORD)
+            for (j = 0; j < requests[i].record_length; j++) {
+                req[req_length++] = requests[i].data[j] >> 8;
+                req[req_length++] = requests[i].data[j] & 0xff;
+            }
+    }
 
     rc = _modbus_send_msg(ctx, req, req_length);
+
     if (rc > 0) {
-        int offset;
-        int i;
-
         rc = _modbus_receive_msg(ctx, rsp, MSG_CONFIRMATION);
-        if (rc == -1)
-            return -1;
+        if (rc != -1)
+            rc = check_confirmation(ctx, req, rsp, rc);
+    }
+    return rc;
+}
 
-        rc = check_confirmation(ctx, req, rsp, rc);
-        if (rc == -1)
-            return -1;
+int modbus_write_file_record(modbus_t *ctx, const modbus_file_record_request_t requests[], size_t request_count)
+{
+    uint8_t req[MAX_MESSAGE_LENGTH];
+    uint8_t rsp[MAX_MESSAGE_LENGTH];
 
-        offset = ctx->backend->header_length;
+    return modbus_file_record_request(ctx,
+                                      requests,
+                                      request_count,
+                                      MODBUS_FC_WRITE_FILE_RECORD,
+                                      req,
+                                      rsp);
+}
 
-        for (i = 0; i < rc; i++) {
+int modbus_read_file_record(modbus_t *ctx, modbus_file_record_request_t requests[], size_t request_count)
+{
+    uint8_t req[MAX_MESSAGE_LENGTH];
+    uint8_t rsp[MAX_MESSAGE_LENGTH];
 
-            dest[i] = (rsp[offset + 4 + (i << 1)] << 8) |
-                       rsp[offset + 5 + (i << 1)];
+    int rc = modbus_file_record_request(ctx,
+                                        requests,
+                                        request_count,
+                                        MODBUS_FC_READ_FILE_RECORD,
+                                        req,
+                                        rsp);
+
+    if (rc > 0) {
+        int offset = ctx->backend->header_length;
+        size_t i;
+
+        for (i = 0; i < request_count; i++) {
+            int j;
+
+            if (rsp[offset++] != 6) {
+                if (ctx->debug) {
+                    fprintf(stderr,
+                            "ERROR Unexpected data in file_record read response, expected 6, got %d",
+                            rsp[offset - 1]);
+                }
+                errno = EMBMDATA;
+                return -1;
+            }
+
+            if (rsp[offset++] / 2 != requests[i].record_length) {
+                if (ctx->debug) {
+                    fprintf(stderr,
+                            "ERROR Unexpected record_length in file_record-read-response, expected %d, got %d",
+                            requests[i].record_length, rsp[offset - 1] / 2);
+                }
+                errno = EMBMDATA;
+                return -1;
+            }
+
+            for (j = 0; j < requests[i].record_length; j++) {
+                requests[i].data[i] = rsp[offset++] << 8;
+                requests[i].data[i] |= rsp[offset++];
+            }
         }
     }
 
@@ -1123,64 +1208,6 @@ int modbus_write_registers(modbus_t *ctx, int addr, int nb, const uint16_t *src)
 
     return rc;
 }
-
-int modbus_write_file_record(modbus_t *ctx, int addr, int sub_addr, int nb, const uint16_t *src)
-{
-    int rc;
-    int i;
-    int req_length;
-    int byte_count;
-    uint8_t req[MAX_MESSAGE_LENGTH];
-
-    if (ctx == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    if (sub_addr > MODBUS_MAX_FILE_RECORD_NUMBER) {
-        if (ctx->debug) {
-            fprintf(stderr,
-                    "ERROR Too big file record number (%d > %d)\n",
-                    sub_addr, MODBUS_MAX_FILE_RECORD_NUMBER);
-        }
-        errno = EMBMDATA;
-        return -1;
-    }
-
-    req_length = ctx->backend->build_request_basis(ctx,
-                                                   MODBUS_FC_WRITE_FILE_RECORD,
-                                                   0, 0, req);
-
-    byte_count = nb * 2;
-    req_length -= 4;
-    req[req_length++] = 7 + byte_count;  // one request header + bytes to write
-    req[req_length++] = 6;
-    req[req_length++] = addr >> 8;
-    req[req_length++] = addr & 0x00ff;
-    req[req_length++] = sub_addr >> 8;
-    req[req_length++] = sub_addr & 0x00ff;
-    req[req_length++] = nb >> 8;
-    req[req_length++] = nb & 0x00ff;
-
-    for (i = 0; i < nb; i++) {
-        req[req_length++] = src[i] >> 8;
-        req[req_length++] = src[i] & 0x00FF;
-    }
-
-    rc = _modbus_send_msg(ctx, req, req_length);
-    if (rc > 0) {
-        uint8_t rsp[MAX_MESSAGE_LENGTH];
-
-        rc = _modbus_receive_msg(ctx, rsp, MSG_CONFIRMATION);
-        if (rc == -1)
-            return -1;
-
-        rc = check_confirmation(ctx, req, rsp, rc);
-    }
-
-    return rc;
-}
-
 
 int modbus_mask_write_register(modbus_t *ctx, int addr, uint16_t and_mask, uint16_t or_mask)
 {

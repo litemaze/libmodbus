@@ -163,6 +163,14 @@ extern const unsigned int libmodbus_version_micro;
 
 typedef struct _modbus modbus_t;
 
+typedef struct modbus_file_record_sub_request {
+    uint16_t file_number;
+    uint16_t record_number;
+    uint16_t record_length;
+
+    uint16_t *data; // buffer provided must be record_length * 2 bytes
+} modbus_file_record_request_t;
+
 typedef struct _modbus_file_t {
     int nb_records;
     int record_size;
@@ -235,8 +243,10 @@ MODBUS_API int modbus_write_bit(modbus_t *ctx, int coil_addr, int status);
 MODBUS_API int modbus_write_register(modbus_t *ctx, int reg_addr, int value);
 MODBUS_API int modbus_write_bits(modbus_t *ctx, int addr, int nb, const uint8_t *data);
 MODBUS_API int modbus_write_registers(modbus_t *ctx, int addr, int nb, const uint16_t *data);
-MODBUS_API int modbus_write_file_record(modbus_t *ctx, int addr, int sub_addr, int nb, const uint16_t *src);
-MODBUS_API int modbus_read_file_record(modbus_t *ctx, int addr, int sub_addr, int nb, uint16_t *dest);
+
+MODBUS_API int modbus_write_file_record(modbus_t *ctx, const modbus_file_record_request_t requests[], size_t request_count);
+MODBUS_API int modbus_read_file_record(modbus_t *ctx, modbus_file_record_request_t requests[], size_t request_count);
+
 MODBUS_API int modbus_mask_write_register(modbus_t *ctx, int addr, uint16_t and_mask, uint16_t or_mask);
 MODBUS_API int modbus_write_and_read_registers(modbus_t *ctx, int write_addr, int write_nb,
                                                const uint16_t *src, int read_addr, int read_nb,
