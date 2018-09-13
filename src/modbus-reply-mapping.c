@@ -42,11 +42,15 @@ static int response_io_status(uint8_t *tab_io_status,
 
 static int mb_mapping_accept_rtu_slave(void *user_ctx, int slave)
 {
+    (void)user_ctx;
+    (void)slave;
+
     return TRUE;
 }
 
 static int mb_mapping_verify(void *user_ctx, int slave, int function, uint16_t address, int nb)
 {
+    (void)slave;
     modbus_mapping_t *mb_mapping = user_ctx;
 
     unsigned int is_input = 0;
@@ -84,6 +88,9 @@ static int mb_mapping_verify(void *user_ctx, int slave, int function, uint16_t a
 
 static int mb_mapping_read(void *user_ctx, int slave, int function, uint16_t address, int nb, uint8_t *rsp, int max_len)
 {
+    (void)slave;
+    (void)max_len;
+
     modbus_mapping_t *mb_mapping = user_ctx;
 
     unsigned int is_input = 0;
@@ -122,6 +129,7 @@ static int mb_mapping_read(void *user_ctx, int slave, int function, uint16_t add
 
 static int mb_mapping_write(void *user_ctx, int slave, int function, uint16_t address, int nb, const uint8_t *req)
 {
+    (void)slave;
     modbus_mapping_t *mb_mapping = user_ctx;
 
     switch (function) {

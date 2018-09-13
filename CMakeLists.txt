@@ -47,6 +47,7 @@ check_symbol_exists(TIOCM_RTS sys/ioctl.h HAVE_TIOCM_RTS)
 configure_file(config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 #### BUILD OPTIONS ####
+
 include(GNUInstallDirs)
 
 set(MODBUS_PUBLIC_HEADERS
@@ -74,7 +75,9 @@ target_include_directories(modbus INTERFACE
 set_target_properties(modbus PROPERTIES PUBLIC_HEADER "${MODBUS_PUBLIC_HEADERS}")
 
 if(CMAKE_COMPILER_IS_GNUCC)
-    target_compile_options(modbus PRIVATE -D_GNU_SOURCE)
+    target_compile_options(modbus
+        PRIVATE
+            -D_GNU_SOURCE -Wall -Wextra)
 endif()
 
 set(LIBMODBUS_SOVERSION_VERSION 5.1.0)

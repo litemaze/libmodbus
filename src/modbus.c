@@ -464,6 +464,7 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
                     step = _STEP_META;
                     break;
                 } /* else switches straight to the next step */
+                  // fall-through
             case _STEP_META:
                 length_to_read = compute_data_length_after_meta(
                     ctx, msg, msg_type);
@@ -665,7 +666,6 @@ static int check_confirmation(modbus_t *ctx, uint8_t *req,
 
     return rc;
 }
-
 
 int modbus_reply_exception(modbus_t *ctx, const uint8_t *req,
                            unsigned int exception_code)
@@ -1637,7 +1637,7 @@ modbus_mapping_t *modbus_mapping_new_start_address(
     if (nb_files == 0) {
         mb_mapping->files = NULL;
     } else {
-        mb_mapping->files = (modbus_file_t *) malloc(nb_files * sizeof(modbus_file_t));
+        mb_mapping->files = (modbus_file_t *)malloc(nb_files * sizeof(modbus_file_t));
         if (mb_mapping->files == NULL) {
             free(mb_mapping->tab_input_registers);
             free(mb_mapping->tab_registers);
@@ -1652,7 +1652,7 @@ modbus_mapping_t *modbus_mapping_new_start_address(
         for (i = 0; i < nb_files; i++) {
             mb_mapping->files[i].nb_records = nb_records;
             mb_mapping->files[i].record_size = record_size;
-            mb_mapping->files[i].records = (uint16_t **) malloc(nb_records * sizeof(uint16_t *));
+            mb_mapping->files[i].records = (uint16_t **)malloc(nb_records * sizeof(uint16_t *));
             if (mb_mapping->files[i].records == NULL) {
                 while (i) {
                     free(mb_mapping->files[i--].records);
@@ -1666,7 +1666,7 @@ modbus_mapping_t *modbus_mapping_new_start_address(
                 return NULL;
             }
             for (j = 0; j < nb_records; j++) {
-                mb_mapping->files[i].records[j] = (uint16_t *) malloc(record_size * sizeof(uint16_t));
+                mb_mapping->files[i].records[j] = (uint16_t *)malloc(record_size * sizeof(uint16_t));
                 if (mb_mapping->files[i].records[j] == NULL) {
                     while (j) {
                         free(mb_mapping->files[i].records[j--]);
