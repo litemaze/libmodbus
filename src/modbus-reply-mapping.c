@@ -48,7 +48,7 @@ static int mb_mapping_accept_rtu_slave(void *user_ctx, int slave)
     return TRUE;
 }
 
-static int mb_mapping_verify(void *user_ctx, int slave, int function, uint16_t address, int nb)
+static int mb_mapping_verify(void *user_ctx, int slave, int function, uint32_t address, int nb)
 {
     (void)slave;
     modbus_mapping_t *mb_mapping = user_ctx;
@@ -81,12 +81,30 @@ static int mb_mapping_verify(void *user_ctx, int slave, int function, uint16_t a
         if (mapping_address < 0 || (mapping_address + nb) > nb_registers)
             return EMBXILADD;
     } break;
+
+	case MODBUS_FC_READ_FILE_RECORD:
+	case MODBUS_FC_WRITE_FILE_RECORD: {
+		uint16_t file_buffer = address >> 16;
+		uint16_t record = address & 0xffff;
+		printf("reading file %d, record %d, nb %d\n", file_buffer, record, nb);
+
+		if (file_buffer < mb_mapping->start_files ||
+			file_buffer > mb_mapping->start_files + mb_mapping->nb_files)
+			return EMBXILADD;
+
+        if (record >= mb_mapping->files[file_buffer].nb_records)
+            return EMBXILADD;
+
+		if (nb >= mb_mapping->files[file_buffer].record_size)
+            return EMBXILADD;
+	} break;
+
     }
 
     return 0;
 }
 
-static int mb_mapping_read(void *user_ctx, int slave, int function, uint16_t address, int nb, uint8_t *rsp, int max_len)
+static int mb_mapping_read(void *user_ctx, int slave, int function, uint32_t address, int nb, uint8_t *rsp, int max_len)
 {
     (void)slave;
     (void)max_len;
@@ -127,9 +145,10 @@ static int mb_mapping_read(void *user_ctx, int slave, int function, uint16_t add
     return length;
 }
 
-static int mb_mapping_write(void *user_ctx, int slave, int function, uint16_t address, int nb, const uint8_t *req)
+static int mb_mapping_write(void *user_ctx, int slave, int function, uint32_t address, int nb, const uint8_t *req)
 {
     (void)slave;
+
     modbus_mapping_t *mb_mapping = user_ctx;
 
     switch (function) {

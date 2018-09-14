@@ -24,7 +24,7 @@
 #include "modbus-private.h"
 
 /* Internal use */
-#define MSG_LENGTH_UNDEFINED -1
+#define MSG_LENGTH_UNDEFINED 0xffffffff
 
 /* Exported version */
 const unsigned int libmodbus_version_major = LIBMODBUS_VERSION_MAJOR;
@@ -124,7 +124,7 @@ int modbus_flush(modbus_t *ctx)
 }
 
 /* Computes the length of the expected response */
-static unsigned int compute_response_length_from_request(modbus_t *ctx, uint8_t *req)
+static unsigned int compute_response_length_from_request(modbus_t *ctx, const uint8_t *req, size_t req_length)
 {
     int length;
     const int offset = ctx->backend->header_length;
@@ -149,12 +149,20 @@ static unsigned int compute_response_length_from_request(modbus_t *ctx, uint8_t 
         /* The response is device specific (the header provides the
            length) */
         return MSG_LENGTH_UNDEFINED;
-    case MODBUS_FC_READ_FILE_RECORD:
-        length = 4 + 2 * (req[offset + 7] << 8 | req[offset + 8]);
-        break;
+    case MODBUS_FC_READ_FILE_RECORD: {
+		const uint8_t *end = req + req_length;
+		req += offset;
+
+        length = 2; // func and length
+        while (req < end) {
+			length += 1 + 1;
+			length += (req[5] << 8 | req[6]) * 2;
+			req += 7;
+		}
+	} break;
     case MODBUS_FC_WRITE_FILE_RECORD:
-        length = 9 + 2 * (req[offset + 7] << 8 | req[offset + 8]);
-        break;
+        return req_length + ctx->backend->checksum_length;
+
     case MODBUS_FC_MASK_WRITE_REGISTER:
         length = 7;
         break;
@@ -301,7 +309,7 @@ static uint8_t compute_meta_length_after_function(int function,
 }
 
 /* Computes the length to read after the meta information (address, count, etc) */
-static int compute_data_length_after_meta(modbus_t *ctx, uint8_t *msg,
+static int compute_data_length_after_meta(modbus_t *ctx, const uint8_t *msg,
                                           msg_type_t msg_type)
 {
     int function = msg[ctx->backend->header_length];
@@ -528,11 +536,11 @@ int modbus_receive_confirmation(modbus_t *ctx, uint8_t *rsp)
     return _modbus_receive_msg(ctx, rsp, MSG_CONFIRMATION);
 }
 
-static int check_confirmation(modbus_t *ctx, uint8_t *req,
-                              uint8_t *rsp, int rsp_length)
+static int check_confirmation(modbus_t *ctx, const uint8_t *req, size_t req_length,
+                              const uint8_t *rsp, size_t rsp_length)
 {
     int rc;
-    int rsp_length_computed;
+    size_t rsp_length_computed;
     const int offset = ctx->backend->header_length;
     const int function = rsp[offset];
 
@@ -547,11 +555,11 @@ static int check_confirmation(modbus_t *ctx, uint8_t *req,
         }
     }
 
-    rsp_length_computed = compute_response_length_from_request(ctx, req);
+    rsp_length_computed = compute_response_length_from_request(ctx, req, req_length);
 
     /* Exception code */
     if (function >= 0x80) {
-        if (rsp_length == (offset + 2 + (int)ctx->backend->checksum_length) &&
+        if (rsp_length == (offset + 2 + ctx->backend->checksum_length) &&
             req[offset] == (rsp[offset] - 0x80)) {
             /* Valid exception code received */
 
@@ -653,7 +661,7 @@ static int check_confirmation(modbus_t *ctx, uint8_t *req,
     } else {
         if (ctx->debug) {
             fprintf(stderr,
-                    "Message length not corresponding to the computed length (%d != %d)\n",
+                    "Message length not corresponding to the computed length (%zd != %zd)\n",
                     rsp_length, rsp_length_computed);
         }
         if (ctx->error_recovery & MODBUS_ERROR_RECOVERY_PROTOCOL) {
@@ -725,7 +733,7 @@ static int read_io_status(modbus_t *ctx, int function,
         if (rc == -1)
             return -1;
 
-        rc = check_confirmation(ctx, req, rsp, rc);
+        rc = check_confirmation(ctx, req, req_length, rsp, rc);
         if (rc == -1)
             return -1;
 
@@ -832,7 +840,7 @@ static int read_registers(modbus_t *ctx, int function, int addr, int nb,
         if (rc == -1)
             return -1;
 
-        rc = check_confirmation(ctx, req, rsp, rc);
+        rc = check_confirmation(ctx, req, req_length, rsp, rc);
         if (rc == -1)
             return -1;
 
@@ -917,7 +925,8 @@ static int modbus_file_record_request(modbus_t *ctx,
     }
 
     for (i = 0; i < request_count; i++) {
-        byte_count += requests[i].record_length * 2;
+		if (func == MODBUS_FC_WRITE_FILE_RECORD)
+			byte_count += requests[i].record_length * 2;
 
         if (requests[i].file_number == 0) {
             if (ctx->debug) {
@@ -952,8 +961,10 @@ static int modbus_file_record_request(modbus_t *ctx,
 
     req_length = ctx->backend->build_request_basis(ctx,
                                                    func,
-                                                   byte_count, 0, req); // using address-field for byte_count
-    req_length -= 2;                                                    // rewind for byte-count-field
+                                                   0, 0, req);
+
+    req_length -= 4; // rewind - don't use encoded address and count field
+	req[req_length++] = byte_count;
 
     for (i = 0; i < request_count; i++) {
         size_t j;
@@ -978,7 +989,7 @@ static int modbus_file_record_request(modbus_t *ctx,
     if (rc > 0) {
         rc = _modbus_receive_msg(ctx, rsp, MSG_CONFIRMATION);
         if (rc != -1)
-            rc = check_confirmation(ctx, req, rsp, rc);
+            rc = check_confirmation(ctx, req, req_length, rsp, rc);
     }
     return rc;
 }
@@ -1069,7 +1080,7 @@ static int write_single(modbus_t *ctx, int function, int addr, int value)
         if (rc == -1)
             return -1;
 
-        rc = check_confirmation(ctx, req, rsp, rc);
+        rc = check_confirmation(ctx, req, req_length, rsp, rc);
     }
 
     return rc;
@@ -1154,7 +1165,7 @@ int modbus_write_bits(modbus_t *ctx, int addr, int nb, const uint8_t *src)
         if (rc == -1)
             return -1;
 
-        rc = check_confirmation(ctx, req, rsp, rc);
+        rc = check_confirmation(ctx, req, req_length, rsp, rc);
     }
 
     return rc;
@@ -1203,7 +1214,7 @@ int modbus_write_registers(modbus_t *ctx, int addr, int nb, const uint16_t *src)
         if (rc == -1)
             return -1;
 
-        rc = check_confirmation(ctx, req, rsp, rc);
+        rc = check_confirmation(ctx, req, req_length, rsp, rc);
     }
 
     return rc;
@@ -1239,7 +1250,7 @@ int modbus_mask_write_register(modbus_t *ctx, int addr, uint16_t and_mask, uint1
         if (rc == -1)
             return -1;
 
-        rc = check_confirmation(ctx, req, rsp, rc);
+        rc = check_confirmation(ctx, req, req_length, rsp, rc);
     }
 
     return rc;
@@ -1309,7 +1320,7 @@ int modbus_write_and_read_registers(modbus_t *ctx,
         if (rc == -1)
             return -1;
 
-        rc = check_confirmation(ctx, req, rsp, rc);
+        rc = check_confirmation(ctx, req, req_length, rsp, rc);
         if (rc == -1)
             return -1;
 
@@ -1353,7 +1364,7 @@ int modbus_report_slave_id(modbus_t *ctx, int max_dest, uint8_t *dest)
         if (rc == -1)
             return -1;
 
-        rc = check_confirmation(ctx, req, rsp, rc);
+        rc = check_confirmation(ctx, req, req_length, rsp, rc);
         if (rc == -1)
             return -1;
 

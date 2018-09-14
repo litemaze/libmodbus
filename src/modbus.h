@@ -203,9 +203,9 @@ typedef enum {
 
 typedef struct {
     int (*accept_rtu_slave)(void *user_ctx, int slave);
-    int (*verify)(void *user_ctx, int slave, int function, uint16_t address, int nb);
-    int (*read)(void *user_ctx, int slave, int function, uint16_t address, int nb, uint8_t bytes[], int len);
-    int (*write)(void *user_ctx, int slave, int function, uint16_t address, int nb, const uint8_t bytes[]);
+    int (*verify)(void *user_ctx, int slave, int function, uint32_t address, int nb);
+    int (*read)(void *user_ctx, int slave, int function, uint32_t address, int nb, uint8_t bytes[], int len);
+    int (*write)(void *user_ctx, int slave, int function, uint32_t address, int nb, const uint8_t bytes[]);
 } modbus_reply_callbacks_t;
 
 MODBUS_API int modbus_set_slave(modbus_t *ctx, int slave);
