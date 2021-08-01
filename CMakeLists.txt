@@ -59,6 +59,10 @@ set(MODBUS_PUBLIC_HEADERS
 
 option(BUILD_SHARED_LIBS "Build libmodbus as a shared library" ON)
 
+if (BUILD_SHARED_LIBS)
+add_definitions(-DBUILD_SHARED_LIBS)
+endif(BUILD_SHARED_LIBS)
+
 add_library(modbus
     src/modbus-data.c
     src/modbus-rtu.c
@@ -72,6 +76,10 @@ target_include_directories(modbus INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/modbus>
 )
+if(MSVC)
+	target_link_libraries(modbus ws2_32)
+endif(MSVC)
+
 set_target_properties(modbus PROPERTIES PUBLIC_HEADER "${MODBUS_PUBLIC_HEADERS}")
 
 if(CMAKE_COMPILER_IS_GNUCC)
@@ -93,11 +101,11 @@ if(BUILD_DOCS)
 endif()
 #### INSTALL ####
 
-install(TARGETS modbus EXPORT libmodbusConfig
+install(TARGETS modbus EXPORT modbusConfig
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/modbus)
-install(EXPORT libmodbusConfig DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+install(EXPORT modbusConfig DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
 
 get_filename_component(ABSOLUTE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
 

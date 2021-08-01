@@ -20,7 +20,7 @@
 
 #include "modbus-version.h"
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(BUILD_SHARED_LIBS)
 #    if defined(DLLBUILD)
 /* define DLLBUILD when building the DLL */
 #        define MODBUS_API __declspec(dllexport)
@@ -187,7 +187,7 @@ typedef struct {
 
 MODBUS_API int modbus_set_slave(modbus_t *ctx, int slave);
 MODBUS_API int modbus_get_slave(modbus_t *ctx);
-MODBUS_API int modbus_set_error_recovery(modbus_t *ctx, modbus_error_recovery_mode error_recovery);
+MODBUS_API int modbus_set_error_recovery(modbus_t *ctx, int error_recovery);
 MODBUS_API int modbus_set_socket(modbus_t *ctx, int s);
 MODBUS_API int modbus_get_socket(modbus_t *ctx);
 

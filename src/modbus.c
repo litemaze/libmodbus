@@ -1232,8 +1232,7 @@ int modbus_get_slave(modbus_t *ctx)
     return ctx->slave;
 }
 
-int modbus_set_error_recovery(modbus_t *ctx,
-                              modbus_error_recovery_mode error_recovery)
+int modbus_set_error_recovery(modbus_t *ctx, int error_recovery)
 {
     if (ctx == NULL) {
         errno = EINVAL;

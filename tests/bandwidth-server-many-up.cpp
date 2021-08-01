@@ -5,7 +5,6 @@
  */
 
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -16,6 +15,7 @@
 #if defined(_WIN32)
 #    include <ws2tcpip.h>
 #else
+#    include <unistd.h>
 #    include <sys/select.h>
 #    include <sys/socket.h>
 #    include <netinet/in.h>
@@ -32,7 +32,11 @@ static int server_socket = -1;
 static void close_sigint(int dummy)
 {
     if (server_socket != -1) {
+#if _MSC_VER
+        closesocket(server_socket);
+#else
         close(server_socket);
+#endif
     }
     modbus_free(ctx);
     modbus_mapping_free(mb_mapping);
@@ -124,7 +128,11 @@ int main(void)
                     /* This example server in ended on connection closing or
                      * any errors. */
                     printf("Connection closed on socket %d\n", master_socket);
+#if _MSC_VER
+                    closesocket(master_socket);
+#else
                     close(master_socket);
+#endif
 
                     /* Remove from reference set */
                     FD_CLR(master_socket, &refset);

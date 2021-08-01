@@ -2,7 +2,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/unit-test.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/unit-test.h)
 
 macro(build_test NAME)
-    add_executable(${NAME} ${NAME}.c)
+    add_executable(${NAME} ${NAME}.cpp)
     target_link_libraries(${NAME} modbus)
     target_include_directories(${NAME}
         PRIVATE

@@ -5,15 +5,17 @@
  */
 
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <modbus.h>
+#include <thread>
+#include <chrono>
 #ifdef _WIN32
 #    include <winsock2.h>
 #else
 #    include <sys/socket.h>
+#    include <unistd.h>
 #endif
 
 /* For MinGW */
@@ -58,14 +60,14 @@ int main(int argc, char *argv[])
 
     if (use_backend == TCP) {
         ctx = modbus_new_tcp("127.0.0.1", 1502);
-        query = malloc(MODBUS_TCP_MAX_ADU_LENGTH);
+        query = (uint8_t*)malloc(MODBUS_TCP_MAX_ADU_LENGTH);
     } else if (use_backend == TCP_PI) {
         ctx = modbus_new_tcp_pi("::0", "1502");
-        query = malloc(MODBUS_TCP_MAX_ADU_LENGTH);
+        query = (uint8_t *)malloc(MODBUS_TCP_MAX_ADU_LENGTH);
     } else {
         ctx = modbus_new_rtu("/dev/ttyUSB0", 115200, 'N', 8, 1);
         modbus_set_slave(ctx, SERVER_ID);
-        query = malloc(MODBUS_RTU_MAX_ADU_LENGTH);
+        query = (uint8_t *)malloc(MODBUS_RTU_MAX_ADU_LENGTH);
     }
     header_length = modbus_get_header_length(ctx);
 
@@ -148,7 +150,7 @@ int main(int argc, char *argv[])
                 continue;
             } else if (MODBUS_GET_INT16_FROM_INT8(query, header_length + 1) == UT_REGISTERS_ADDRESS_SLEEP_500_MS) {
                 printf("Sleep 0.5 s before replying\n");
-                usleep(500000);
+                std::this_thread::sleep_for(std::chrono::microseconds(500000));
             } else if (MODBUS_GET_INT16_FROM_INT8(query, header_length + 1) == UT_REGISTERS_ADDRESS_BYTE_SLEEP_5_MS) {
                 /* Test low level only available in TCP mode */
                 /* Catch the reply and send reply byte a byte */
@@ -164,7 +166,7 @@ int main(int argc, char *argv[])
                 req[1] = query[1];
                 for (i = 0; i < req_length; i++) {
                     printf("(%.2X)", req[i]);
-                    usleep(5000);
+                    std::this_thread::sleep_for(std::chrono::microseconds(5000));
                     rc = send(w_s, (const char *)(req + i), 1, MSG_NOSIGNAL);
                     if (rc == -1) {
                         break;
@@ -184,7 +186,11 @@ int main(int argc, char *argv[])
 
     if (use_backend == TCP) {
         if (s != -1) {
+#if defined(_WINDOWS)
+            closesocket(s);
+#else
             close(s);
+#endif
         }
     }
     modbus_mapping_free(mb_mapping);

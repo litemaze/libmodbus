@@ -50,7 +50,11 @@ int main(void)
     printf("Quit the loop: %s\n", modbus_strerror(errno));
 
     if (s != -1) {
+#if _MSC_VER
+        closesocket(s);
+#else
         close(s);
+#endif
     }
     modbus_mapping_free(mb_mapping);
     modbus_close(ctx);

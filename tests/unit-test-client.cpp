@@ -5,12 +5,18 @@
  */
 
 #include <stdio.h>
+
+#if !defined(_WINDOWS)
 #include <unistd.h>
+#endif
+
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <modbus.h>
-
+#include <assert.h>
+#include <thread>
+#include <chrono>
 #include "unit-test.h"
 
 const int EXCEPTION_RC = 2;
@@ -28,15 +34,12 @@ int send_crafted_request(modbus_t *ctx, int function,
                          int backend_length, int backend_offset);
 int equal_dword(uint16_t *tab_reg, const uint32_t value);
 
-#define BUG_REPORT(_cond, _format, _args...) \
-    printf("\nLine %d: assertion error for '%s': " _format "\n", __LINE__, #_cond, ##_args)
-
-#define ASSERT_TRUE(_cond, _format, __args...)    \
+#define ASSERT_TRUE(_cond)    \
     {                                             \
         if (_cond) {                              \
             printf("OK\n");                       \
         } else {                                  \
-            BUG_REPORT(_cond, _format, ##__args); \
+            assert(false); \
             goto close;                           \
         }                                         \
     };
@@ -96,8 +99,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     modbus_set_debug(ctx, TRUE);
-    modbus_set_error_recovery(ctx,
-                              MODBUS_ERROR_RECOVERY_LINK |
+    modbus_set_error_recovery(ctx, MODBUS_ERROR_RECOVERY_LINK |
                                   MODBUS_ERROR_RECOVERY_PROTOCOL);
 
     if (use_backend == RTU) {
@@ -579,7 +581,7 @@ int main(int argc, char *argv[])
      * libmodbus but after a sleep of current response timeout
      * so 0 can be too short!
      */
-    usleep(old_response_to_sec * 1000000 + old_response_to_usec);
+    std::this_thread::sleep_for(std::chrono::microseconds(old_response_to_sec * 1000000 + old_response_to_usec));
     modbus_flush(ctx);
 
     /* Trigger a special behaviour on server to wait for 0.5 second before
@@ -591,7 +593,7 @@ int main(int argc, char *argv[])
     ASSERT_TRUE(rc == -1 && errno == ETIMEDOUT, "");
 
     /* Wait for reply (0.2 + 0.4 > 0.5 s) and flush before continue */
-    usleep(400000);
+    std::this_thread::sleep_for(std::chrono::microseconds(400000));
     modbus_flush(ctx);
 
     modbus_set_response_timeout(ctx, 0, 600000);
@@ -624,7 +626,7 @@ int main(int argc, char *argv[])
         ASSERT_TRUE(rc == -1 && errno == ETIMEDOUT, "");
 
         /* Wait remaing bytes before flushing */
-        usleep(11 * 5000);
+        std::this_thread::sleep_for(std::chrono::microseconds(11 * 5000));
         modbus_flush(ctx);
 
         /* Timeout of 7ms between bytes */
